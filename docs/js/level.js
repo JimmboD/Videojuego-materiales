@@ -33,10 +33,18 @@
   const rnd = (a, b) => a + Math.random() * (b - a);
   const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 
-  function survival(m, Tz, k, T0 = 320) {
-    if (Tz < m.melting_point) return Infinity;
-    return Math.log((Tz - T0) / (Tz - m.melting_point)) / (k * m.engine.heat_rate);
+  function marginAt(d) {
+    // Margen exponencial negativo: comienza en 15% (0.15) y decrece con la dificultad
+    return 0.15 * Math.exp(-1.5 * Math.max(0, Math.min(1, d)));
   }
+
+  function survival(m, Tz, k, T0 = 320, margin = 0.15) {
+    const Tsafe = m.melting_point * (1 - margin);
+    if (Tz <= Tsafe) return Infinity;
+    if (T0 >= Tsafe) return 0;
+    return Math.log((Tz - T0) / (Tz - Tsafe)) / (k * m.engine.heat_rate);
+  }
+
   function lifts(m, T = 300) {
     return CD.DB.magAt(m, T) * K.K_MAG > K.G0 * m.engine.gravity_scale;
   }
@@ -94,7 +102,9 @@
       return 44;
     }
     wall(x, a, d) {
-      const ok = BLOCKS.filter(b => b.B < a.maxB * 0.97);
+      const margin = marginAt(d);
+      const maxAllowedB = a.maxB * (1 - margin);
+      const ok = BLOCKS.filter(b => b.B <= maxAllowedB);
       if (!ok.length) return this.block(x, a);
       const idx = Math.min(ok.length - 1, Math.floor(Math.random() * ok.length * (0.5 + d)));
       const b = ok[Math.max(0, idx)];
@@ -102,13 +112,16 @@
       return 40;
     }
     spikes(x, a, d) {
-      const w = rnd(36, 70 + 80 * d);
+      const margin = marginAt(d);
+      const maxW = this.run.speed * this.airtime(a.minGs) * 0.6 * (1 - margin);
+      const w = Math.min(maxW, rnd(36, 60 + 60 * d));
       this.run.add({ type: 'spikes', x, w, y: K.GROUND - 18, h: 18 });
       return w;
     }
     pit(x, a, d) {
-      const maxW = 0.68 * this.run.speed * this.airtime(a.minGs);
-      const w = Math.max(70, Math.min(maxW, rnd(90, 140 + 220 * d)));
+      const margin = marginAt(d);
+      const maxW = 0.65 * this.run.speed * this.airtime(a.minGs) * (1 - margin);
+      const w = Math.max(65, Math.min(maxW, rnd(80, 110 + 160 * d)));
       this.run.pits.push({ x0: x, x1: x + w });
       return w;
     }
@@ -126,25 +139,65 @@
     }
     arc(x, a) {
       let off = 0;
-      if (!a.insulator && !a.metal) {            // solo semiconductores: precalentar
-        this.run.zones.push({ kind: 'hot', x0: x, x1: x + 520, T: 1500, k: K.K_HOT, label: 'HORNO 1500 K' });
-        off = 520;
+      if (!a.insulator && !a.metal) {
+        // Si no tiene aislante ni metal, ofrecer dopante antes del arco para garantizar paso seguro
+        const safeDopant = CD.DB.playable.find(m => m.engine.elec_class === 'insulator' || m.engine.elec_class === 'metal');
+        if (safeDopant) {
+          this.run.add({ type: 'dopant', x, y: K.GROUND - 70, w: 28, h: 28, mat: safeDopant.id });
+          off = 220;
+        }
       }
       this.run.add({ type: 'arc', x: x + off, w: 26, y: K.CEIL, h: K.GROUND - K.CEIL });
       return off + 26;
     }
     hot(x, a, d) {
-      const opts = HOT.filter(h => d >= h.d);
-      for (let tries = 0; tries < 4; tries++) {
-        const h = pick(opts);
-        const best = Math.max(...this.mats.map(m => survival(m, h.T, K.K_HOT)));
-        const L = Math.min(rnd(500, 900 + 500 * d), 0.7 * this.run.speed * best);
-        if (L < 220) continue;
-        this.run.zones.push({ kind: 'hot', x0: x, x1: x + L, T: h.T, k: K.K_HOT, label: h.label });
-        if (L > 600 && Math.random() < 0.6) this.run.add({ type: 'spikes', x: x + L * 0.5, w: 46, y: K.GROUND - 18, h: 18 });
-        return L;
+      const margin = marginAt(d);
+      const spd = Math.max(200, this.run.speed);
+
+      // Calcular para cada material del jugador la temperatura máxima que puede absorber en tránsito
+      // garantizando T_final <= Tm * (1 - margin)
+      const targetL = Math.max(240, Math.min(850, rnd(380, 580 + 300 * d)));
+      const dt = targetL / spd;
+
+      let bestAbsorbT = 0;
+      let bestMat = this.mats[0];
+
+      for (const m of this.mats) {
+        const Tsafe = m.melting_point * (1 - margin);
+        const decay = Math.exp(-K.K_HOT * m.engine.heat_rate * dt);
+        // Si el material prácticamente no se calienta en este tiempo, su límite térmico es muy alto
+        const maxT = decay >= 0.99 ? Tsafe * 2.5 : (Tsafe - 300 * decay) / Math.max(0.01, 1 - decay);
+        if (maxT > bestAbsorbT) {
+          bestAbsorbT = maxT;
+          bestMat = m;
+        }
       }
-      return this.flat();
+
+      // Temperatura segura a generar: jamás puede exceder bestAbsorbT
+      // Selección de candidatos según dificultad, acotados por la capacidad de absorción del loadout
+      const nominalT = [700, 1200, 1800, 2600, 4200][Math.min(4, Math.floor(d * 4.5))];
+      const finalT = Math.round(Math.min(nominalT, bestAbsorbT));
+
+      // Verificación estricta: asegurar que con finalT el mejor material no supera Tm * (1 - margin)
+      const maxSurv = survival(bestMat, finalT, K.K_HOT, 300, margin);
+      let safeL = targetL;
+      if (maxSurv !== Infinity) {
+        const maxDist = maxSurv * spd * (1 - margin);
+        if (maxDist < 200) {
+          // Si ni con longitud mínima sobrevive a finalT, limitar finalT a lo que absorbe continuamente
+          const continuousT = Math.round(bestMat.melting_point * (1 - margin));
+          this.run.zones.push({ kind: 'hot', x0: x, x1: x + 260, T: continuousT, k: K.K_HOT, label: `HORNO ${continuousT} K` });
+          return 260;
+        }
+        safeL = Math.max(200, Math.min(targetL, maxDist));
+      }
+
+      const label = finalT >= 3500 ? `PLASMA ${finalT} K` : finalT >= 2000 ? `INDUCCIÓN ${finalT} K` : `HORNO ${finalT} K`;
+      this.run.zones.push({ kind: 'hot', x0: x, x1: x + safeL, T: finalT, k: K.K_HOT, label });
+      if (safeL > 550 && Math.random() < 0.5) {
+        this.run.add({ type: 'spikes', x: x + safeL * 0.5, w: 44, y: K.GROUND - 18, h: 18 });
+      }
+      return safeL;
     }
     cryo(x, a, d, forcedT) {
       let c;
