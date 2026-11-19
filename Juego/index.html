@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Crystal Dash — Endless runner de ciencia de materiales</title>
+<meta name="description" content="Endless runner táctico basado en propiedades reales de materiales (JARVIS-DFT).">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="960" height="540"></canvas>
+
+  <!-- Menú principal -->
+  <section id="menu" class="overlay">
+    <div class="panel center">
+      <h1 class="logo">CRYSTAL<span>DASH</span></h1>
+      <p class="tag">Endless runner de física del estado sólido</p>
+      <div class="stats-line"><span id="menuBest"></span><span id="menuCredits"></span></div>
+      <div class="btns">
+        <button id="btnPlay" class="primary">▶ Jugar</button>
+        <button id="btnLab">⚗ Laboratorio</button>
+        <button id="btnGuide">? Guía</button>
+      </div>
+      <div class="controls">
+        <div><kbd>Espacio</kbd>/<kbd>Clic izq.</kbd> Saltar · mantener = planear · en el aire con material denso = picada</div>
+        <div><kbd>Shift</kbd>/<kbd>Clic der.</kbd>/<kbd>Rueda</kbd> Rotar material · <kbd>1-4</kbd> directo · <kbd>P</kbd> pausa · <kbd>M</kbd> sonido</div>
+        <div class="touch-only">Táctil: mitad izquierda = saltar · mitad derecha = cambiar material</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Laboratorio -->
+  <section id="lab" class="overlay hidden">
+    <div class="panel wide">
+      <header class="lab-head">
+        <h2>⚗ Laboratorio · Árbol Periódico</h2>
+        <div class="credits">Puntos de síntesis: <b id="labCredits">0</b></div>
+        <button id="labBack">✕</button>
+      </header>
+      <div class="loadout-row">
+        <span>Carrusel equipado:</span>
+        <div id="loadout"></div>
+        <small>Clic en una ranura para vaciarla · máx. 4</small>
+      </div>
+      <div class="lab-body">
+        <div id="matGrid"></div>
+        <aside id="matDetail"></aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- Guía -->
+  <section id="guide" class="overlay hidden">
+    <div class="panel wide scroll">
+      <header class="lab-head"><h2>Guía de física</h2><button id="guideBack">✕</button></header>
+      <div class="guide-grid">
+        <article><h3>Densidad ρ → gravedad</h3><p>g<sub>eff</sub> = g₀·(ρ/ρ<sub>ref</sub>)<sup>0.45</sup>. Materiales ligeros (Li, grafeno) saltan alto y <b>planean</b> si mantienes salto. Densos (Pb, W, Os) caen en <b>picada</b>: pulsa salto en el aire o cambia a ellos en el ápice (<i>air-cancel</i>).</p></article>
+        <article><h3>Módulo volumétrico B → romper</h3><p>Si B<sub>jugador</sub> &gt; B<sub>obstáculo</sub> pulverizas el bloque y sumas combo. Si no: fractura catastrófica. Contorno <span class="ok">verde</span> = rompible con tu material actual.</p></article>
+        <article><h3>Cociente de Pugh B/G</h3><p>B/G &lt; 1.75 = frágil (diamante, SiC): se astilla al caer desde altura. Cambia a un metal dúctil (Cu, Au) antes de aterrizar.</p></article>
+        <article><h3>Módulo de corte G → cizallas</h3><p>Los discos de corte se rompen si tu G supera el suyo.</p></article>
+        <article><h3>Conductividad térmica κ</h3><p>dT/dt = k<sub>env</sub>·κ·(T<sub>zona</sub> − T). En plasma usa aislantes (ZrO₂). Si T ≥ T<sub>fusión</sub>: te fundes. Entrar sobrecalentado a criogenia con un buen conductor = <b>Thermal Flush</b> (bonus). Cerámicas frágiles de baja κ sufren choque térmico.</p></article>
+        <article><h3>Bandgap E<sub>g</sub> → arcos voltaicos</h3><p>Metales (E<sub>g</sub>=0) cargan el capacitor; si ya está al 100 % sufren sobrecarga Joule. Aislantes (E<sub>g</sub>&gt;3 eV) son inmunes. Semiconductores solo conducen si T &gt; 300 + 300·E<sub>g</sub> K; fríos sufren ruptura dieléctrica.</p></article>
+        <article><h3>Capacitor = escudo</h3><p>Con ≥50 % de energía, un golpe mortal se absorbe (cuesta 50 %).</p></article>
+        <article><h3>Magnetismo μ<sub>B</sub></h3><p>Bajo un electroimán de techo, un ferromagnético con fuerza magnética mayor que su peso se adhiere al techo. Por encima de su T<sub>Curie</sub> pierde el magnetismo (el Gd solo es ferromagnético por debajo de 293 K).</p></article>
+        <article><h3>Superconductividad T<sub>c</sub></h3><p>Si T<sub>zona</sub> &lt; T<sub>c</sub> (o tu T &lt; T<sub>c</sub>): <b>Estado Meissner</b>. Levitas sobre pinchos y ácido, y la energía es infinita. LN₂ 77 K, hielo seco 195 K, He 4.2 K, He-II 1.8 K.</p></article>
+        <article><h3>Metaestabilidad (ehull)</h3><p>ehull &gt; 0.05 eV/átomo: estadísticas rotas pero con temporizador. Úsalo demasiado y sufre transición de fase (diamante → grafito, H₃S → azufre). En 2D, la energía de exfoliación de JARVIS hace de ehull.</p></article>
+        <article><h3>Cristales dopantes</h3><p>Tócalos para mutar 8 s a ese compuesto, aunque no lo tengas sintetizado.</p></article>
+        <article><h3>Datos</h3><p>Los 2D (grafeno, h-BN, MoS₂, NbSe₂, fosforeno) vienen de JARVIS-DFT (jid real). Los bulk usan una semilla curada; el pipeline <code>build_materials_db.py --jarvis3d</code> los refresca desde JARVIS dft_3d.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Fin de partida -->
+  <section id="over" class="overlay hidden">
+    <div class="panel center">
+      <h2 class="danger" id="overTitle">Fractura catastrófica</h2>
+      <p id="overReason" class="reason"></p>
+      <div class="score-big"><span id="overScore">0</span><small>puntos</small></div>
+      <p id="overInfo"></p>
+      <div class="btns">
+        <button id="btnRetry" class="primary">↻ Reintentar</button>
+        <button id="btnOverLab">⚗ Laboratorio</button>
+        <button id="btnOverMenu">Menú</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="pause" class="overlay hidden">
+    <div class="panel center"><h2>Pausa</h2><div class="btns"><button id="btnResume" class="primary">▶ Continuar</button><button id="btnPauseMenu">Menú</button></div></div>
+  </section>
+</div>
+
+<script src="data/materials_db.js"></script>
+<script src="js/data.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/crystal.js"></script>
+<script src="js/level.js"></script>
+<script src="js/game.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
