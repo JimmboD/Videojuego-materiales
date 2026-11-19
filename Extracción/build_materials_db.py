@@ -1,7 +1,7 @@
 """
 Crystal Dash - Pipeline de datos
 ================================
-Genera ../Juego/data/materials_db.json y ../Juego/data/materials_db.js
+Genera ../docs/data/materials_db.json y ../docs/data/materials_db.js
 (el .js permite abrir el juego con doble clic, sin servidor).
 
 Fuentes:
@@ -26,7 +26,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 CSV_2D = HERE / "dft_2d_completo.csv"
-OUT_DIR = HERE.parent / "Juego" / "data"
+OUT_DIR = HERE.parent / "docs" / "data"
 
 RHO_REF = 5.0   # g/cm3 -> gravity_scale = 1
 ALPHA = 0.45    # exponente de gravedad efectiva
