@@ -177,3 +177,6 @@ Para publicar el juego en GitHub Pages:
 2. En **Build and deployment**, seleccionar como origen `Deploy from a branch`.
 3. Escoger la rama principal (`main`) y seleccionar la carpeta `/docs`.
 4. Guardar los cambios. El sitio estara operativo sin pasos adicionales de compilacion.
+
+
+Linea para forzar a actualizar el git
