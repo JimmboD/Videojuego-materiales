@@ -1,16 +1,24 @@
 /* Crystal Dash — interfaz de menús y laboratorio */
 (function () {
   const DB = CD.DB, A = CD.Audio, $ = id => document.getElementById(id);
-  const overlays = { menu: $('menu'), lab: $('lab'), guide: $('guide'), over: $('over'), pause: $('pause') };
+  const overlays = { menu: $('menu'), lab: $('lab'), guide: $('guide'), settings: $('settings'), over: $('over'), pause: $('pause') };
+  const soundtracks = [
+    { id: 'menu', name: 'Crystal Dash', description: 'Tema principal · disponible', cost: 0 },
+    { id: 'materials', name: 'Materiales', description: 'Chiptune de síntesis y exploración', cost: 120 },
+    { id: 'orbit', name: 'Órbita', description: 'Secuencia electrónica de alta energía', cost: 180 },
+    { id: 'reactor', name: 'Pulso de reactores', description: 'Ritmo de 8 bits para la carrera', cost: 220, mode: 'game' },
+    { id: 'resonance', name: 'Resonancia cuántica', description: 'Melodía extendida para la partida', cost: 260, mode: 'game' },
+    { id: 'ionstorm', name: 'Aurora de iones', description: 'Paisaje rítmico extendido para correr', cost: 300, mode: 'game' },
+  ];
   let selectedId = DB.progress.loadout[0] || DB.playable[0].id;
-  let selectedSlot = 0, labActive = false, labPreviewCanvas = null;
+  let selectedSlot = 0, labActive = false, labPreviewCanvas = null, activeLabTab = 'materials';
   const UI = {
     activeOverlay: 'menu',
     show(name) {
       this.activeOverlay = name || null; labActive = name === 'lab';
       for (const key in overlays) overlays[key].classList.toggle('hidden', key !== name);
       if (name === 'menu') this.refreshMenu();
-      if (name === 'lab') this.renderLab();
+      if (name === 'lab') { activeLabTab = 'materials'; this.renderLab(); this.setLabTab(activeLabTab); }
     },
     refreshMenu() {
       const p = DB.progress;
@@ -33,15 +41,34 @@
         window.setTimeout(() => panel.classList.remove('synthesis-burst'), 850);
       }
       $('labCredits').textContent = DB.progress.credits;
-      this.updateMusicButton();
+      this.renderSoundtracks();
       this.renderLoadout(effect); this.renderGrid(); this.renderDetail();
     },
-    updateMusicButton() {
-      const button = $('musicButton'), status = $('musicStatus'), p = DB.progress;
-      if (!button) return;
-      button.disabled = !p.musicPurchased && p.credits < 120;
-      button.textContent = !p.musicPurchased ? 'Comprar · 120 Artecoins' : (A.musicPlaying() ? 'Pausar pista' : 'Reproducir pista');
-      status.textContent = !p.musicPurchased ? 'Melodía 8 bits · compra única' : 'Melodía 8 bits desbloqueada';
+    renderSoundtracks() {
+      const p = DB.progress, menuList = $('menuSoundtrackList'), gameList = $('gameSoundtrackList');
+      $('soundtrackCredits').textContent = p.credits; menuList.innerHTML = ''; gameList.innerHTML = '';
+      for (const track of soundtracks) {
+        const owned = p.soundtrackOwned.includes(track.id), inGame = track.mode === 'game', selected = !inGame && p.selectedSoundtrack === track.id;
+        const card = document.createElement('article'); card.className = `track-card${track.mode === 'game' ? ' in-game' : ''}${selected ? ' selected' : ''}${owned ? ' owned' : ''}`;
+        const disabled = inGame ? (owned || p.credits < track.cost) : (selected || (!owned && p.credits < track.cost));
+        card.innerHTML = `<div class="track-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><div class="track-copy"><b>${track.name}</b><small>${track.description}</small></div><div class="track-actions"><button class="track-preview" type="button">Escuchar</button><button class="track-action" type="button" ${disabled ? 'disabled' : ''}>${inGame ? owned ? 'En rotación' : `Comprar · ${track.cost} Artecoins` : selected ? 'En uso' : owned ? 'Usar en menú' : `Comprar · ${track.cost} Artecoins`}</button></div>`;
+        card.querySelector('.track-preview').onclick = () => A.previewMusic(track.id, 'shop');
+        card.querySelector('.track-action').onclick = () => {
+          if (!owned) { if (p.credits < track.cost) return; p.credits -= track.cost; p.soundtrackOwned.push(track.id); p.musicPurchased = p.soundtrackOwned.includes('materials'); }
+          if (!inGame) p.selectedSoundtrack = track.id;
+          DB.save(); A.play(owned ? 'select' : 'absorb'); this.renderSoundtracks();
+        };
+        (inGame ? gameList : menuList).appendChild(card);
+      }
+    },
+    setLabTab(tab) {
+      activeLabTab = tab === 'soundtrack' ? 'soundtrack' : 'materials';
+      const materials = activeLabTab === 'materials';
+      $('labMaterialsView').classList.toggle('hidden', !materials);
+      $('labSoundtrackView').classList.toggle('hidden', materials);
+      $('labMaterialsTab').classList.toggle('active', materials); $('labMaterialsTab').setAttribute('aria-selected', String(materials));
+      $('labSoundtrackTab').classList.toggle('active', !materials); $('labSoundtrackTab').setAttribute('aria-selected', String(!materials));
+      A.startMusic(materials ? 'lab' : 'shop');
     },
     renderLoadout(effect) {
       const p = DB.progress, box = $('loadout'); box.innerHTML = '';

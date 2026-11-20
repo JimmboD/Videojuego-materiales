@@ -621,7 +621,7 @@
       }
       if (near.type === 'arc') return { t: '⚡ Arco: Metal carga escudo · Aislante pasa sin daño', c: '#ffe066' };
       if (near.type === 'laser') return { t: '🔴 Láser alto: ve por abajo (o cae en picada con material pesado)', c: '#ff8a95' };
-      if (near.type === 'dopant') return { t: `💎 Dopante ${DB.get(near.mat).formula}: tócalo para probarlo 8 s`, c: '#ffd27a' };
+      if (near.type === 'dopant') return { t: `? Dopante ${DB.get(near.mat).formula}: tócalo para probarlo 8 s`, c: '#ffd27a' };
     }
     return { t: '[Espacio] Saltar / Planear  ·  [Shift / 1-4] Cambiar material  ·  [P] Pausa', c: '#8fb0cc' };
   }
@@ -719,7 +719,7 @@
     let st = null;
     if (run.meissner) st = ['❄ MEISSNER', '#5ff2ff'];
     else if (run.p.ceil) st = ['🧲 ADHERIDO', '#d9a6ff'];
-    else if (run.absorbed) st = [`💎 DOPADO ${run.absorbTimer.toFixed(0)}s`, '#ffd27a'];
+    else if (run.absorbed) st = [`? DOPADO ${run.absorbTimer.toFixed(0)}s`, '#ffd27a'];
     if (st) {
       ctx.font = 'bold 11px Segoe UI';
       const w = ctx.measureText(st[0]).width + 16;

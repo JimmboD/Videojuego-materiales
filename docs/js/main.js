@@ -27,10 +27,12 @@
     run = new CD.Run(DB.progress.loadout);
     state = 'play';
     UI.show(null);
+    A.startRandomGameMusic();
   }
 
   function finishRun() {
     if (!run || state !== 'play') return;
+    A.stopMusic();
     state = 'over';
     const p = DB.progress;
     const score = run.score;
@@ -49,10 +51,12 @@
   function togglePause() {
     if (state === 'play') {
       state = 'pause';
+      A.stopMusic();
       UI.show('pause');
     } else if (state === 'pause') {
       state = 'play';
       UI.show(null);
+      A.startRandomGameMusic();
       lastT = performance.now();
     }
   }
@@ -63,26 +67,27 @@
     state = 'menu';
     run = null;
     UI.show('menu');
+    A.startMusic(DB.progress.selectedSoundtrack);
   }
 
   /* Botones de UI */
   $('btnPlay').onclick = startRun;
   $('btnRetry').onclick = startRun;
-  $('btnLab').onclick = () => { A.init(); UI.show('lab'); };
+  $('btnLab').onclick = () => { A.init(); A.stopMusic(); UI.show('lab'); };
+  $('labMaterialsTab').onclick = () => UI.setLabTab('materials');
+  $('labSoundtrackTab').onclick = () => UI.setLabTab('soundtrack');
   $('btnOverLab').onclick = () => { A.init(); state = 'menu'; run = null; UI.show('lab'); };
-  $('labBack').onclick = () => { A.stopMusic(); UI.show('menu'); };
-  $('btnGuide').onclick = () => { A.init(); UI.show('guide'); };
-  $('guideBack').onclick = () => { A.stopMusic(); UI.show('menu'); };
-  $('musicButton').onclick = () => {
-    const p = DB.progress;
-    if (!p.musicPurchased) {
-      if (p.credits < 120) return;
-      p.credits -= 120; p.musicPurchased = true; DB.save(); A.play('select'); UI.renderLab();
-      A.startMusic();
-    } else if (A.musicPlaying()) A.stopMusic();
-    else A.startMusic();
-    UI.updateMusicButton();
-  };
+  $('labBack').onclick = goMenu;
+  $('btnGuide').onclick = () => { A.init(); A.stopMusic(); UI.show('guide'); A.startMusic('guide'); };
+  $('guideBack').onclick = goMenu;
+  $('btnSettings').onclick = () => { A.init(); UI.show('settings'); };
+  $('settingsBack').onclick = () => UI.show('menu');
+  for (const [id, type, outputId] of [['musicVolume', 'music', 'musicVolumeValue'], ['effectsVolume', 'effects', 'effectsVolumeValue']]) {
+    const slider = $(id), output = $(outputId);
+    slider.value = DB.progress[type === 'music' ? 'musicVolume' : 'effectsVolume'];
+    output.value = `${slider.value}%`; output.textContent = output.value;
+    slider.oninput = () => { A.setVolume(type, slider.value); output.value = `${slider.value}%`; output.textContent = output.value; };
+  }
   $('btnOverMenu').onclick = goMenu;
   $('btnPauseMenu').onclick = goMenu;
   $('btnResume').onclick = togglePause;
@@ -105,10 +110,12 @@
       if (state === 'play' && !e.repeat) run.switchMat(0, Number(e.code[5]) - 1);
     } else if (e.code === 'KeyP' || e.code === 'Escape') {
       if (state === 'play' || state === 'pause') { e.preventDefault(); togglePause(); }
-      else if (UI.activeOverlay === 'lab' || UI.activeOverlay === 'guide') UI.show('menu');
+      else if (UI.activeOverlay === 'lab' || UI.activeOverlay === 'guide') goMenu();
+      else if (UI.activeOverlay === 'settings') UI.show('menu');
     } else if (e.code === 'KeyM') {
       DB.progress.muted = !DB.progress.muted;
       DB.save();
+      A.refreshVolumes();
       if (run) run.pop(DB.progress.muted ? 'SONIDO OFF' : 'SONIDO ON', '#cfe3f5');
     } else if (e.code === 'KeyR' && state === 'over' && !overTimeout) {
       startRun();
@@ -179,6 +186,10 @@
   });
 
   /* Pausa automática al cambiar de pestaña */
+  document.addEventListener('pointerdown', () => {
+    A.init();
+    if (UI.activeOverlay === 'menu' && !A.musicPlaying()) A.startMusic(DB.progress.selectedSoundtrack);
+  }, true);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && state === 'play') togglePause();
   });
@@ -203,5 +214,7 @@
   }
 
   UI.show('menu');
+  A.init();
+  A.startMusic(DB.progress.selectedSoundtrack);
   requestAnimationFrame(loop);
 })();
