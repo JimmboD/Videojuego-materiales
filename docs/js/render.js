@@ -236,7 +236,7 @@
       ctx.font = 'bold 12px Segoe UI, sans-serif';
       ctx.fillStyle = z.kind === 'hot' ? '#ffb070' : z.kind === 'cryo' ? '#9ef' : '#d9a6ff';
       const lx = Math.max(x0 + 8, Math.min(8, x1 - 160));
-      ctx.fillText((z.kind === 'hot' ? '🔥 ' : z.kind === 'cryo' ? '❄ ' : '🧲 ') + z.label, Math.max(lx, x0 + 8), K.CEIL + 20);
+      ctx.fillText(z.label, Math.max(lx, x0 + 8), K.CEIL + 20);
       ctx.restore();
     }
   }
@@ -593,13 +593,13 @@
   /* Indicación táctica breve según la zona actual o el próximo obstáculo */
   function liveTip(run) {
     const m = run.mat, e = m.engine, px = run.dist + K.PS / 2;
-    if (run.T > m.melting_point * 0.72) return { t: '⚠ ¡Te estás fundiendo! Cambia a un aislante térmico o mayor Tm', c: '#ff5d6c' };
-    if (run.meissner) return { t: '❄ Estado Meissner activo: levitas sobre pinchos y ácido', c: '#5ff2ff' };
+    if (run.T > m.melting_point * 0.72) return { t: '[!] Te estás fundiendo: cambia a un aislante térmico o material con mayor Tm', c: '#ff5d6c' };
+    if (run.meissner) return { t: 'Estado Meissner activo: levitas sobre pinchos y ácido', c: '#5ff2ff' };
     const z = run.zonesAt(px)[0];
     if (z) {
-      if (z.kind === 'magnet') return { t: '🧲 Electroimán: usa Fe/ferromagnético para pegarte al techo', c: '#d9a6ff' };
-      if (z.kind === 'hot') return { t: '🔥 Zona caliente: materiales con baja κ se calientan más lento', c: '#ffb070' };
-      if (z.kind === 'cryo') return { t: '❄ Criogenia: superconductores levitan · conductores disipan calor', c: '#8ff' };
+      if (z.kind === 'magnet') return { t: 'Electroimán: usa Fe/ferromagnético para pegarte al techo', c: '#d9a6ff' };
+      if (z.kind === 'hot') return { t: 'Zona caliente: materiales con baja κ se calientan más lento', c: '#ffb070' };
+      if (z.kind === 'cryo') return { t: 'Criogenia: superconductores levitan · conductores disipan calor', c: '#8ff' };
     }
     // Buscar el siguiente obstáculo cercano (entre 0 y 420 px adelante)
     let near = null, bestD = 420;
@@ -611,17 +611,17 @@
     if (near) {
       if (near.type === 'block') {
         return e.break_threshold > near.B
-          ? { t: `✔ Borde VERDE: atraviesa el bloque (${near.label}) para ganar combo`, c: '#5dff9b' }
-          : { t: `🧱 Borde ROJO (B ${near.B}): sáltalo o cambia a un material más duro`, c: '#ff8a95' };
+          ? { t: `Borde VERDE: atraviesa el bloque (${near.label}) para ganar combo`, c: '#5dff9b' }
+          : { t: `Borde ROJO (B ${near.B}): sáltalo o cambia a un material más duro`, c: '#ff8a95' };
       }
       if (near.type === 'saw') {
         return e.shear_threshold > near.G
-          ? { t: `✔ Borde VERDE: tu corte (G ${m.shear_modulus}) rompe la sierra`, c: '#5dff9b' }
-          : { t: `⚙ Sierra (G ${near.G}): sáltala o usa un material con mayor G`, c: '#ff8a95' };
+          ? { t: `Borde VERDE: tu corte (G ${m.shear_modulus}) rompe la sierra`, c: '#5dff9b' }
+          : { t: `Sierra (G ${near.G}): sáltala o usa un material con mayor G`, c: '#ff8a95' };
       }
-      if (near.type === 'arc') return { t: '⚡ Arco: Metal carga escudo · Aislante pasa sin daño', c: '#ffe066' };
-      if (near.type === 'laser') return { t: '🔴 Láser alto: ve por abajo (o cae en picada con material pesado)', c: '#ff8a95' };
-      if (near.type === 'dopant') return { t: `? Dopante ${DB.get(near.mat).formula}: tócalo para probarlo 8 s`, c: '#ffd27a' };
+      if (near.type === 'arc') return { t: 'Arco: Metal carga escudo · Aislante pasa sin daño', c: '#ffe066' };
+      if (near.type === 'laser') return { t: 'Láser alto: ve por abajo (o cae en picada con material pesado)', c: '#ff8a95' };
+      if (near.type === 'dopant') return { t: `Dopante ${DB.get(near.mat).formula}: tócalo para probarlo 8 s`, c: '#ffd27a' };
     }
     return { t: '[Espacio] Saltar / Planear  ·  [Shift / 1-4] Cambiar material  ·  [P] Pausa', c: '#8fb0cc' };
   }
@@ -717,9 +717,9 @@
 
     // Estado especial junto a la puntuación.
     let st = null;
-    if (run.meissner) st = ['❄ MEISSNER', '#5ff2ff'];
-    else if (run.p.ceil) st = ['🧲 ADHERIDO', '#d9a6ff'];
-    else if (run.absorbed) st = [`? DOPADO ${run.absorbTimer.toFixed(0)}s`, '#ffd27a'];
+    if (run.meissner) st = ['MEISSNER', '#5ff2ff'];
+    else if (run.p.ceil) st = ['ADHERIDO', '#d9a6ff'];
+    else if (run.absorbed) st = [`DOPADO ${run.absorbTimer.toFixed(0)}s`, '#ffd27a'];
     if (st) {
       ctx.font = 'bold 11px Segoe UI';
       const w = ctx.measureText(st[0]).width + 16;

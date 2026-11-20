@@ -104,6 +104,8 @@
       if (this.dead) return;
       this.dead = true; this.deathTitle = title; this.deathReason = reason;
       this.shake = 18; A.play('die');
+      A.setZoneSound(null);
+      this.lastAudioZone = null;
       this.burst(K.PX + K.PS / 2, this.p.y + K.PS / 2, this.mat.color, 40, 380, 1.2);
     }
     /* golpe mortal: el capacitor actúa como escudo */

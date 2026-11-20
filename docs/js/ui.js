@@ -3,12 +3,12 @@
   const DB = CD.DB, A = CD.Audio, $ = id => document.getElementById(id);
   const overlays = { menu: $('menu'), lab: $('lab'), guide: $('guide'), settings: $('settings'), over: $('over'), pause: $('pause') };
   const soundtracks = [
-    { id: 'menu', name: 'Crystal Dash', description: 'Tema principal · disponible', cost: 0 },
-    { id: 'materials', name: 'Materiales', description: 'Chiptune de síntesis y exploración', cost: 120 },
-    { id: 'orbit', name: 'Órbita', description: 'Secuencia electrónica de alta energía', cost: 180 },
-    { id: 'reactor', name: 'Pulso de reactores', description: 'Ritmo de 8 bits para la carrera', cost: 220, mode: 'game' },
-    { id: 'resonance', name: 'Resonancia cuántica', description: 'Melodía extendida para la partida', cost: 260, mode: 'game' },
-    { id: 'ionstorm', name: 'Aurora de iones', description: 'Paisaje rítmico extendido para correr', cost: 300, mode: 'game' },
+    { id: 'menu', name: 'Crystal Dash', description: 'Tema del menú principal', cost: 0, role: 'Menú principal' },
+    { id: 'lab', name: 'Laboratorio y Carrusel', description: 'Tema de la pantalla de materiales', cost: 0, role: 'Pantalla materiales' },
+    { id: 'melodias_del_subsuelo', name: 'Melodías del subsuelo', description: 'Banda sonora completa para la partida (8 bits)', cost: 0, mode: 'game', role: 'En partida' },
+    { id: 'ionstorm', name: 'Aurora de iones', description: 'Paisaje rítmico extendido de alta energía', cost: 0, mode: 'game', role: 'En partida' },
+    { id: 'reactor', name: 'Pulso de reactores', description: 'Ritmo sintetizado para la carrera', cost: 140, mode: 'game', role: 'En partida' },
+    { id: 'resonance', name: 'Resonancia cuántica', description: 'Melodía extendida para la partida', cost: 180, mode: 'game', role: 'En partida' },
   ];
   let selectedId = DB.progress.loadout[0] || DB.playable[0].id;
   let selectedSlot = 0, labActive = false, labPreviewCanvas = null, activeLabTab = 'materials';
@@ -45,20 +45,63 @@
       this.renderLoadout(effect); this.renderGrid(); this.renderDetail();
     },
     renderSoundtracks() {
-      const p = DB.progress, menuList = $('menuSoundtrackList'), gameList = $('gameSoundtrackList');
-      $('soundtrackCredits').textContent = p.credits; menuList.innerHTML = ''; gameList.innerHTML = '';
+      const p = DB.progress;
+      const list = $('soundtrackList') || $('gameSoundtrackList') || $('menuSoundtrackList');
+      $('soundtrackCredits').textContent = p.credits;
+      if (!list) return;
+      list.innerHTML = '';
+      const currentTrackPlaying = A.currentMusic();
+
       for (const track of soundtracks) {
-        const owned = p.soundtrackOwned.includes(track.id), inGame = track.mode === 'game', selected = !inGame && p.selectedSoundtrack === track.id;
-        const card = document.createElement('article'); card.className = `track-card${track.mode === 'game' ? ' in-game' : ''}${selected ? ' selected' : ''}${owned ? ' owned' : ''}`;
-        const disabled = inGame ? (owned || p.credits < track.cost) : (selected || (!owned && p.credits < track.cost));
-        card.innerHTML = `<div class="track-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><div class="track-copy"><b>${track.name}</b><small>${track.description}</small></div><div class="track-actions"><button class="track-preview" type="button">Escuchar</button><button class="track-action" type="button" ${disabled ? 'disabled' : ''}>${inGame ? owned ? 'En rotación' : `Comprar · ${track.cost} Artecoins` : selected ? 'En uso' : owned ? 'Usar en menú' : `Comprar · ${track.cost} Artecoins`}</button></div>`;
-        card.querySelector('.track-preview').onclick = () => A.previewMusic(track.id, 'shop');
-        card.querySelector('.track-action').onclick = () => {
-          if (!owned) { if (p.credits < track.cost) return; p.credits -= track.cost; p.soundtrackOwned.push(track.id); p.musicPurchased = p.soundtrackOwned.includes('materials'); }
-          if (!inGame) p.selectedSoundtrack = track.id;
-          DB.save(); A.play(owned ? 'select' : 'absorb'); this.renderSoundtracks();
+        const owned = p.soundtrackOwned.includes(track.id);
+        const inGame = track.mode === 'game';
+        const isPlaying = (currentTrackPlaying === track.id && A.musicPlaying());
+
+        const card = document.createElement('article');
+        card.className = `track-card${inGame ? ' in-game' : ''}${owned ? ' owned' : ''}${isPlaying ? ' playing' : ''}`;
+
+        const playSvg = isPlaying
+          ? '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><rect x="6" y="6" width="12" height="12" fill="currentColor"/></svg>'
+          : '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>';
+
+        let actionDisabled = false;
+        let actionText = '';
+        if (!owned) {
+          actionDisabled = p.credits < track.cost;
+          actionText = `Comprar · ${track.cost} Artecoins`;
+        } else {
+          actionDisabled = true;
+          actionText = inGame ? 'En rotación' : 'Disponible';
+        }
+
+        card.innerHTML = `<div class="track-art" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>` +
+          `<div class="track-copy"><b>${track.name}</b><small>${track.description}</small><span class="track-tag">${track.role || (inGame ? 'En partida' : 'Menú')}</span></div>` +
+          `<div class="track-actions">` +
+            `<button class="track-preview${isPlaying ? ' playing' : ''}" type="button" title="${isPlaying ? 'Detener muestra' : 'Reproducir muestra'}" aria-label="${isPlaying ? 'Detener' : 'Reproducir'}">${playSvg}</button>` +
+            `<button class="track-action" type="button" ${actionDisabled ? 'disabled' : ''}>${actionText}</button>` +
+          `</div>`;
+
+        card.querySelector('.track-preview').onclick = () => {
+          if (isPlaying) {
+            A.startMusic('lab', { force: true });
+          } else {
+            A.previewMusic(track.id, 'lab');
+          }
+          this.renderSoundtracks();
         };
-        (inGame ? gameList : menuList).appendChild(card);
+
+        if (!owned) {
+          card.querySelector('.track-action').onclick = () => {
+            if (p.credits < track.cost) return;
+            p.credits -= track.cost;
+            p.soundtrackOwned.push(track.id);
+            DB.save();
+            A.play('absorb');
+            this.renderSoundtracks();
+          };
+        }
+
+        list.appendChild(card);
       }
     },
     setLabTab(tab) {
@@ -68,7 +111,8 @@
       $('labSoundtrackView').classList.toggle('hidden', materials);
       $('labMaterialsTab').classList.toggle('active', materials); $('labMaterialsTab').setAttribute('aria-selected', String(materials));
       $('labSoundtrackTab').classList.toggle('active', !materials); $('labSoundtrackTab').setAttribute('aria-selected', String(!materials));
-      A.startMusic(materials ? 'lab' : 'shop');
+      /* Música del menú de materiales y laboratorio ('lab') continúa sonando sin interrupciones */
+      A.startMusic('lab');
     },
     renderLoadout(effect) {
       const p = DB.progress, box = $('loadout'); box.innerHTML = '';

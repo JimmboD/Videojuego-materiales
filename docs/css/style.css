@@ -113,10 +113,14 @@ button:disabled { opacity: .4; cursor: default; }
 .track-copy { min-width: 0; display: grid; gap: 3px; }
 .track-copy b { overflow: hidden; color: #e5f5ff; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .track-copy small { overflow: hidden; color: #91aabd; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-.track-actions { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(78px, .72fr) minmax(0, 1.5fr); gap: 6px; }
+.track-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 8px; align-items: center; }
 .track-actions button { width: 100%; min-width: 0; padding: 7px 5px; font-size: 10px; }
-.track-actions .track-preview { color: #a7d7e4; border-color: rgba(113, 176, 202, .27); background: rgba(13, 30, 47, .75); }
-.track-actions .track-preview:hover { color: #e9fcff; border-color: var(--cyan); }
+.track-actions .track-preview { display: flex; align-items: center; justify-content: center; height: 32px; padding: 0; color: #a7d7e4; border-color: rgba(113, 176, 202, .27); background: rgba(13, 30, 47, .75); cursor: pointer; border-radius: 6px; }
+.track-actions .track-preview:hover { color: #e9fcff; border-color: var(--cyan); background: rgba(22, 60, 95, .85); }
+.track-actions .track-preview.playing { color: #5ff2ff; border-color: #5ff2ff; background: rgba(18, 55, 78, .9); box-shadow: 0 0 10px rgba(95, 242, 255, .3); }
+.track-actions .track-preview svg { display: block; }
+.track-tag { display: inline-block; width: fit-content; margin-top: 2px; padding: 2px 6px; border-radius: 4px; font-size: 9px; text-transform: uppercase; letter-spacing: .4px; background: rgba(117, 180, 215, .12); color: #7ec7df; }
+.track-card.in-game .track-tag { background: rgba(169, 140, 255, .15); color: #c4b0ff; }
 .track-card.selected .track-action { color: #a8f7ff; border-color: rgba(95, 242, 255, .3); background: rgba(22, 86, 99, .35); }
 .control-item b, .control-item small { display: block; }.control-item b { margin-bottom: 3px; color: #d8e9f6; font-size: 11px; }.control-item small { color: #8ea7bc; font-size: 10px; line-height: 1.45; }
 kbd { background: #1b2a3d; border: 1px solid #34506e; border-radius: 4px; padding: 1px 6px; font-size: 12px; color: #fff; }

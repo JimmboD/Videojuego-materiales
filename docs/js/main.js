@@ -23,6 +23,7 @@
   function startRun() {
     A.init();
     A.stopMusic();
+    A.setZoneSound(null);
     if (overTimeout) { clearTimeout(overTimeout); overTimeout = null; }
     run = new CD.Run(DB.progress.loadout);
     state = 'play';
@@ -33,6 +34,7 @@
   function finishRun() {
     if (!run || state !== 'play') return;
     A.stopMusic();
+    A.setZoneSound(null);
     state = 'over';
     const p = DB.progress;
     const score = run.score;
@@ -62,23 +64,22 @@
   }
 
   function goMenu() {
-    A.stopMusic();
     if (overTimeout) { clearTimeout(overTimeout); overTimeout = null; }
     state = 'menu';
     run = null;
     UI.show('menu');
-    A.startMusic(DB.progress.selectedSoundtrack);
+    A.startMusic('menu');
   }
 
   /* Botones de UI */
   $('btnPlay').onclick = startRun;
   $('btnRetry').onclick = startRun;
-  $('btnLab').onclick = () => { A.init(); A.stopMusic(); UI.show('lab'); };
+  $('btnLab').onclick = () => { A.init(); UI.show('lab'); A.startMusic('lab'); };
   $('labMaterialsTab').onclick = () => UI.setLabTab('materials');
   $('labSoundtrackTab').onclick = () => UI.setLabTab('soundtrack');
-  $('btnOverLab').onclick = () => { A.init(); state = 'menu'; run = null; UI.show('lab'); };
+  $('btnOverLab').onclick = () => { A.init(); state = 'menu'; run = null; UI.show('lab'); A.startMusic('lab'); };
   $('labBack').onclick = goMenu;
-  $('btnGuide').onclick = () => { A.init(); A.stopMusic(); UI.show('guide'); A.startMusic('guide'); };
+  $('btnGuide').onclick = () => { A.init(); UI.show('guide'); A.startMusic('menu'); };
   $('guideBack').onclick = goMenu;
   $('btnSettings').onclick = () => { A.init(); UI.show('settings'); };
   $('settingsBack').onclick = () => UI.show('menu');

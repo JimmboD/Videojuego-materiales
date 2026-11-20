@@ -44,7 +44,7 @@
   const def = () => ({
     credits: 0, best: 0, runs: 0, muted: false, seen: {}, musicPurchased: false,
     musicVolume: 70, effectsVolume: 75,
-    soundtrackOwned: ['menu'], selectedSoundtrack: 'menu',
+    soundtrackOwned: ['menu', 'lab', 'melodias_del_subsuelo', 'ionstorm'], selectedSoundtrack: 'menu',
     unlocked: DB.starters.slice(),
     loadout: DB.starters.slice(0, 4),
   });
@@ -52,11 +52,15 @@
   try { p = JSON.parse(localStorage.getItem(KEY)) || def(); } catch (e) { p = def(); }
   const d = def();
   for (const k in d) if (p[k] === undefined) p[k] = d[k];
-  p.soundtrackOwned = Array.isArray(p.soundtrackOwned) ? p.soundtrackOwned : ['menu'];
-  if (p.musicPurchased && !p.soundtrackOwned.includes('materials')) p.soundtrackOwned.push('materials');
+  const validTrackIds = ['menu', 'lab', 'melodias_del_subsuelo', 'ionstorm', 'reactor', 'resonance'];
+  p.soundtrackOwned = (Array.isArray(p.soundtrackOwned) ? p.soundtrackOwned : ['menu', 'lab']).filter(id => validTrackIds.includes(id));
+  if (!p.soundtrackOwned.includes('lab')) p.soundtrackOwned.push('lab');
+  if (!p.soundtrackOwned.includes('melodias_del_subsuelo')) p.soundtrackOwned.push('melodias_del_subsuelo');
+  if (!p.soundtrackOwned.includes('ionstorm')) p.soundtrackOwned.push('ionstorm');
   if (!p.soundtrackOwned.includes('menu')) p.soundtrackOwned.unshift('menu');
-  if (!p.soundtrackOwned.includes(p.selectedSoundtrack)) p.selectedSoundtrack = 'menu';
+  p.selectedSoundtrack = 'menu';
   delete p.selectedGameSoundtrack;
+  delete p.musicPurchased;
   p.unlocked = p.unlocked.filter(id => DB.byId[id]);
   p.loadout = p.loadout.filter(id => p.unlocked.includes(id));
   if (!p.loadout.length) p.loadout = DB.starters.slice(0, 4);
