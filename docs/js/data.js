@@ -42,7 +42,7 @@
   /* Progreso (localStorage) */
   const KEY = 'crystaldash.v1';
   const def = () => ({
-    credits: 0, best: 0, runs: 0, muted: false, seen: {},
+    credits: 0, best: 0, runs: 0, muted: false, seen: {}, musicPurchased: false,
     unlocked: DB.starters.slice(),
     loadout: DB.starters.slice(0, 4),
   });

@@ -146,7 +146,7 @@ El juego adopta un diseno minimalista accesible con teclado, raton o pantalla ta
 
 ## 5. El Laboratorio y el Arbol Periodico
 
-Con los puntos de sintesis acumulados en cada carrera, el jugador puede acceder al panel del Laboratorio para desbloquear compuestos y minerales reales clasificados por niveles de energia:
+Con los Artecoins acumulados en cada carrera, el jugador puede acceder al panel del Laboratorio para desbloquear compuestos y minerales reales clasificados por niveles de energia:
 * **Fase inicial:** Elementos de referencia como Cobre (Cu), Hierro (Fe), Plomo (Pb) y Diamante (C).
 * **Fases intermedias:** Silicio (Si), Cuarzo (SiO2), Aluminio (Al), Titanio (Ti), Arseniuro de Galio (GaAs), Zafiro (Al2O3), Zirconia (ZrO2), Magnetos de Neodimio (Nd2Fe14B) y Diboruro de Magnesio (MgB2).
 * **Fases avanzadas:** Compuestos bidimensionales (Grafeno, Fosforeno, Disulfuro de Molibdeno MoS2, Diseleniuro de Niobio NbSe2, Nitruro de Boro hexagonal 2D), superaleaciones tipo Inconel 718, Osmio metalico (Os) y superconductores de alta temperatura (YBCO, H3S).

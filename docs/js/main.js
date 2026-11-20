@@ -22,6 +22,7 @@
 
   function startRun() {
     A.init();
+    A.stopMusic();
     if (overTimeout) { clearTimeout(overTimeout); overTimeout = null; }
     run = new CD.Run(DB.progress.loadout);
     state = 'play';
@@ -57,6 +58,7 @@
   }
 
   function goMenu() {
+    A.stopMusic();
     if (overTimeout) { clearTimeout(overTimeout); overTimeout = null; }
     state = 'menu';
     run = null;
@@ -68,9 +70,19 @@
   $('btnRetry').onclick = startRun;
   $('btnLab').onclick = () => { A.init(); UI.show('lab'); };
   $('btnOverLab').onclick = () => { A.init(); state = 'menu'; run = null; UI.show('lab'); };
-  $('labBack').onclick = () => UI.show('menu');
+  $('labBack').onclick = () => { A.stopMusic(); UI.show('menu'); };
   $('btnGuide').onclick = () => { A.init(); UI.show('guide'); };
-  $('guideBack').onclick = () => UI.show('menu');
+  $('guideBack').onclick = () => { A.stopMusic(); UI.show('menu'); };
+  $('musicButton').onclick = () => {
+    const p = DB.progress;
+    if (!p.musicPurchased) {
+      if (p.credits < 120) return;
+      p.credits -= 120; p.musicPurchased = true; DB.save(); A.play('select'); UI.renderLab();
+      A.startMusic();
+    } else if (A.musicPlaying()) A.stopMusic();
+    else A.startMusic();
+    UI.updateMusicButton();
+  };
   $('btnOverMenu').onclick = goMenu;
   $('btnPauseMenu').onclick = goMenu;
   $('btnResume').onclick = togglePause;

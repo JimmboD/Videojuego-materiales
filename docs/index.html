@@ -13,19 +13,31 @@
 
   <!-- Menú principal -->
   <section id="menu" class="overlay">
-    <div class="panel center">
-      <h1 class="logo">CRYSTAL<span>DASH</span></h1>
-      <p class="tag">Endless runner de física del estado sólido</p>
-      <div class="stats-line"><span id="menuBest"></span><span id="menuCredits"></span></div>
-      <div class="btns">
-        <button id="btnPlay" class="primary">▶ Jugar</button>
-        <button id="btnLab">⚗ Laboratorio</button>
-        <button id="btnGuide">? Guía</button>
+    <div class="panel center menu-panel">
+      <div class="menu-copy">
+        <div class="eyebrow"><span></span> MATERIAL RUNNER <span></span></div>
+        <h1 class="logo">CRYSTAL<span>DASH</span></h1>
+        <p class="tag">Una carrera de alta energía a través de la física del estado sólido.</p>
+        <div class="stats-line">
+          <div class="stat-card"><span class="stat-label">MEJOR PUNTUACIÓN</span><b id="menuBest"></b></div>
+          <div class="stat-card"><span class="stat-label">ARTECOINS</span><b id="menuCredits"></b></div>
+          <div class="stat-card"><span class="stat-label">MATERIALES</span><b id="menuMaterials"></b></div>
+        </div>
+        <div class="btns">
+          <button id="btnPlay" class="primary">▶ Iniciar expedición</button>
+          <button id="btnLab"><svg class="atom-icon" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="10" ry="4.2"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(120 12 12)"/><circle cx="12" cy="12" r="1.5" class="nucleus"/></svg>Laboratorio</button>
+          <button id="btnGuide"><svg class="book-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6.5C9.7 4.8 6.5 4.4 3 5.2v13c3.5-.8 6.7-.4 9 1.3m0-13c2.3-1.7 5.5-2.1 9-1.3v13c-3.5-.8-6.7-.4-9 1.3m0-13v13"/></svg>Guía</button>
+        </div>
       </div>
       <div class="controls">
-        <div><kbd>Espacio</kbd>/<kbd>Clic izq.</kbd> Saltar · mantener = planear · en el aire con material denso = picada</div>
-        <div><kbd>Shift</kbd>/<kbd>Clic der.</kbd>/<kbd>Rueda</kbd> Rotar material · <kbd>1-4</kbd> directo · <kbd>P</kbd> pausa · <kbd>M</kbd> sonido</div>
-        <div class="touch-only">Táctil: mitad izquierda = saltar · mitad derecha = cambiar material</div>
+        <h2>Controles</h2>
+        <div class="control-grid">
+          <div class="control-item"><span class="control-icon"><svg viewBox="0 0 24 24"><path d="M5 15l6-6 4 4 5-7M14 6h6v6"/></svg></span><span><b>Saltar y planear</b><small><kbd>Espacio</kbd> o clic izquierdo · mantén para planear</small></span></div>
+          <div class="control-item"><span class="control-icon"><svg viewBox="0 0 24 24"><path d="M5 8h14M5 16h14M9 5l-4 3 4 3M15 13l4 3-4 3"/></svg></span><span><b>Cambiar material</b><small><kbd>Shift</kbd>, clic derecho o rueda · <kbd>1–4</kbd> selección directa</small></span></div>
+          <div class="control-item"><span class="control-icon"><svg viewBox="0 0 24 24"><path d="M12 4v10M8 11l4 4 4-4M5 20h14"/></svg></span><span><b>Picada</b><small>En el aire, pulsa salto usando un material denso</small></span></div>
+          <div class="control-item"><span class="control-icon"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="5" height="16" rx="1"/><rect x="14" y="4" width="5" height="16" rx="1"/></svg></span><span><b>Pausa y sonido</b><small><kbd>P</kbd> / <kbd>Esc</kbd> pausa · <kbd>M</kbd> sonido</small></span></div>
+          <div class="control-item touch-only"><span class="control-icon"><svg viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M10 17h4M12 7v6m-2-2 2 2 2-2"/></svg></span><span><b>Pantalla táctil</b><small>Lado izquierdo para saltar · lado derecho para cambiar material</small></span></div>
+        </div>
       </div>
     </div>
   </section>
@@ -34,12 +46,14 @@
   <section id="lab" class="overlay hidden">
     <div class="panel wide">
       <header class="lab-head">
-        <h2>⚗ Laboratorio · Árbol Periódico</h2>
-        <div class="credits">Puntos de síntesis: <b id="labCredits">0</b></div>
+        <h2>Laboratorio · Árbol Periódico</h2>
+        <svg class="lab-atom-mark" viewBox="0 0 24 24" role="img" aria-label="Átomo"><ellipse cx="12" cy="12" rx="10" ry="4.2"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(120 12 12)"/><circle cx="12" cy="12" r="1.5" class="nucleus"/></svg>
+        <div class="credits"><span class="artecoin-symbol" aria-hidden="true">A</span> <b id="labCredits">0</b> <small>Artecoins</small></div>
+        <div class="lab-music"><div><b>Chiptune de laboratorio</b><small id="musicStatus">Pista 8 bits · compra única</small></div><button id="musicButton" type="button">Comprar · 120 Artecoins</button></div>
         <button id="labBack">✕</button>
       </header>
       <div class="loadout-row">
-        <span>Carrusel equipado:</span>
+        <span class="loadout-title">Carrusel equipado <small>· doble clic en un material para intercambiarlo</small></span>
         <div id="loadout"></div>
         <small>Clic en una ranura para vaciarla · máx. 4</small>
       </div>
@@ -80,14 +94,14 @@
       <p id="overInfo"></p>
       <div class="btns">
         <button id="btnRetry" class="primary">↻ Reintentar</button>
-        <button id="btnOverLab">⚗ Laboratorio</button>
+        <button id="btnOverLab">Laboratorio</button>
         <button id="btnOverMenu">Menú</button>
       </div>
     </div>
   </section>
 
   <section id="pause" class="overlay hidden">
-    <div class="panel center"><h2>Pausa</h2><div class="btns"><button id="btnResume" class="primary">▶ Continuar</button><button id="btnPauseMenu">Menú</button></div></div>
+    <div class="panel center pause-panel"><div class="eyebrow"><span></span> SIMULACIÓN EN ESPERA <span></span></div><h2>Pausa</h2><p>El cristal permanece estable.</p><div class="btns"><button id="btnResume" class="primary">▶ Continuar</button><button id="btnPauseMenu">Menú</button></div></div>
   </section>
 </div>
 

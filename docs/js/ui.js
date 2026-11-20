@@ -1,212 +1,202 @@
-/* Crystal Dash — interfaz de menús, Laboratorio (Árbol Periódico) y pantallas */
+/* Crystal Dash — interfaz de menús y laboratorio */
 (function () {
-  const DB = CD.DB, A = CD.Audio;
-  const $ = id => document.getElementById(id);
-
-  const overlays = {
-    menu: $('menu'),
-    lab: $('lab'),
-    guide: $('guide'),
-    over: $('over'),
-    pause: $('pause'),
-  };
-
+  const DB = CD.DB, A = CD.Audio, $ = id => document.getElementById(id);
+  const overlays = { menu: $('menu'), lab: $('lab'), guide: $('guide'), over: $('over'), pause: $('pause') };
   let selectedId = DB.progress.loadout[0] || DB.playable[0].id;
-  let labActive = false;
-  let labPreviewCanvas = null;
-
+  let selectedSlot = 0, labActive = false, labPreviewCanvas = null;
   const UI = {
     activeOverlay: 'menu',
-
     show(name) {
-      this.activeOverlay = name || null;
-      labActive = name === 'lab';
-      for (const k in overlays) {
-        overlays[k].classList.toggle('hidden', k !== name);
-      }
+      this.activeOverlay = name || null; labActive = name === 'lab';
+      for (const key in overlays) overlays[key].classList.toggle('hidden', key !== name);
       if (name === 'menu') this.refreshMenu();
       if (name === 'lab') this.renderLab();
     },
-
     refreshMenu() {
       const p = DB.progress;
       $('menuBest').textContent = `Récord: ${p.best} pts`;
-      $('menuCredits').textContent = `Puntos de síntesis: ${p.credits} · Materiales: ${p.unlocked.length}/${DB.playable.length}`;
+      $('menuCredits').textContent = `${p.credits} Artecoins`;
+      $('menuMaterials').textContent = `${p.unlocked.length} / ${DB.playable.length}`;
     },
-
     showOver(run, earned, isRecord) {
       $('overTitle').textContent = run.deathTitle || 'Fractura catastrófica';
-      $('overReason').textContent = run.deathReason || '';
-      $('overScore').textContent = run.score;
-      const parts = [`+${earned} pts de síntesis`, `Distancia: ${Math.round(run.dist / 10)} m`];
+      $('overReason').textContent = run.deathReason || ''; $('overScore').textContent = run.score;
+      const parts = [`+${earned} Artecoins`, `Distancia: ${Math.round(run.dist / 10)} m`];
       if (run.maxCombo > 1) parts.push(`Combo máx: x${run.maxCombo}`);
       if (isRecord) parts.push('★ NUEVO RÉCORD');
-      $('overInfo').textContent = parts.join('  ·  ');
-      this.show('over');
+      $('overInfo').textContent = parts.join('  ·  '); this.show('over');
     },
-
-    renderLab() {
-      const p = DB.progress;
-      $('labCredits').textContent = p.credits;
-      this.renderLoadout();
-      this.renderGrid();
-      this.renderDetail();
+    renderLab(effect) {
+      if (effect === 'synthesis') {
+        const panel = $('lab').querySelector('.panel');
+        panel.classList.remove('synthesis-burst'); void panel.offsetWidth; panel.classList.add('synthesis-burst');
+        window.setTimeout(() => panel.classList.remove('synthesis-burst'), 850);
+      }
+      $('labCredits').textContent = DB.progress.credits;
+      this.updateMusicButton();
+      this.renderLoadout(effect); this.renderGrid(); this.renderDetail();
     },
-
-    renderLoadout() {
-      const p = DB.progress;
-      const box = $('loadout');
-      box.innerHTML = '';
+    updateMusicButton() {
+      const button = $('musicButton'), status = $('musicStatus'), p = DB.progress;
+      if (!button) return;
+      button.disabled = !p.musicPurchased && p.credits < 120;
+      button.textContent = !p.musicPurchased ? 'Comprar · 120 Artecoins' : (A.musicPlaying() ? 'Pausar pista' : 'Reproducir pista');
+      status.textContent = !p.musicPurchased ? 'Melodía 8 bits · compra única' : 'Melodía 8 bits desbloqueada';
+    },
+    renderLoadout(effect) {
+      const p = DB.progress, box = $('loadout'); box.innerHTML = '';
       for (let i = 0; i < 4; i++) {
-        const id = p.loadout[i];
-        const m = id ? DB.get(id) : null;
-        const el = document.createElement('div');
-        el.className = 'slot' + (m ? ' filled' : '');
-        if (m) {
-          el.style.borderColor = m.color;
-          el.style.background = 'rgba(20, 38, 60, 0.9)';
-          el.innerHTML = `<b>${m.formula}</b><span>${i + 1} · ${m.name.split(' ')[0]}</span>`;
-          el.title = 'Clic para quitar del carrusel';
-          el.onclick = () => {
+        const mat = p.loadout[i] ? DB.get(p.loadout[i]) : null;
+        const slot = document.createElement('div');
+        slot.className = `slot${mat ? ' filled' : ''}${i === selectedSlot ? ' target' : ''}${effect && i === selectedSlot ? ` ${effect}` : ''}`;
+        if (mat) {
+          slot.style.borderColor = mat.color; slot.innerHTML = `<b>${mat.formula}</b><span>${i + 1} · ${mat.name.split(' ')[0]}</span>`;
+          slot.title = 'Clic para elegir ranura · doble clic para quitar';
+          slot.onclick = () => { selectedSlot = i; this.renderLoadout(); };
+          slot.draggable = true;
+          slot.ondragstart = event => { event.dataTransfer.setData('text/loadout-index', String(i)); event.dataTransfer.effectAllowed = 'move'; slot.classList.add('dragging'); };
+          slot.ondragend = () => slot.classList.remove('dragging');
+          slot.ondragover = event => { event.preventDefault(); slot.classList.add('drop-target'); };
+          slot.ondragleave = () => slot.classList.remove('drop-target');
+          slot.ondrop = event => {
+            event.preventDefault(); slot.classList.remove('drop-target');
+            const from = Number(event.dataTransfer.getData('text/loadout-index'));
+            if (Number.isInteger(from) && from >= 0 && from < p.loadout.length && from !== i) {
+              [p.loadout[from], p.loadout[i]] = [p.loadout[i], p.loadout[from]];
+              selectedSlot = i; DB.save(); A.play('switch'); this.renderLab('equip'); return;
+            }
+            const materialId = event.dataTransfer.getData('text/material-id');
+            if (materialId && p.unlocked.includes(materialId)) {
+              const existing = p.loadout.indexOf(materialId);
+              if (existing >= 0 && existing !== i) [p.loadout[existing], p.loadout[i]] = [p.loadout[i], p.loadout[existing]];
+              else if (existing < 0) p.loadout[i] = materialId;
+              selectedSlot = i; DB.save(); A.play('switch'); this.renderLab('equip');
+            }
+          };
+          slot.ondblclick = () => {
             if (p.loadout.length <= 1) return;
-            p.loadout.splice(i, 1);
-            DB.save();
-            A.play('switch');
-            this.renderLab();
+            p.loadout.splice(i, 1); selectedSlot = Math.min(i, p.loadout.length - 1);
+            DB.save(); A.play('switch'); this.renderLab('remove');
           };
         } else {
-          el.innerHTML = `<span>Ranura ${i + 1}</span><small>vacía</small>`;
+          slot.innerHTML = `<span>Ranura ${i + 1}</span><small>vacía</small>`;
+          slot.onclick = () => { selectedSlot = i; this.renderLoadout(); };
+          slot.ondragover = event => { event.preventDefault(); slot.classList.add('drop-target'); };
+          slot.ondragleave = () => slot.classList.remove('drop-target');
+          slot.ondrop = event => {
+            event.preventDefault(); slot.classList.remove('drop-target');
+            const materialId = event.dataTransfer.getData('text/material-id');
+            if (!materialId || !p.unlocked.includes(materialId)) return;
+            const existing = p.loadout.indexOf(materialId);
+            if (existing >= 0) [p.loadout[existing], p.loadout[i]] = [p.loadout[i], p.loadout[existing]];
+            else p.loadout[i] = materialId;
+            selectedSlot = i; DB.save(); A.play('switch'); this.renderLab('equip');
+          };
         }
-        box.appendChild(el);
+        box.appendChild(slot);
       }
     },
-
     renderGrid() {
-      const p = DB.progress;
-      const grid = $('matGrid');
-      grid.innerHTML = '';
+      const p = DB.progress, grid = $('matGrid'); grid.innerHTML = '';
+      const tiers = ['Iniciales', 'Comunes', 'Avanzados', 'Exóticos', 'Ultra raros'];
       const sorted = DB.playable.slice().sort((a, b) => a.tier - b.tier || a.name.localeCompare(b.name));
-      for (const m of sorted) {
-        const unlocked = p.unlocked.includes(m.id);
-        const equipped = p.loadout.includes(m.id);
+      let lastTier = -1;
+      for (const mat of sorted) {
+        if (mat.tier !== lastTier) {
+          lastTier = mat.tier; const title = document.createElement('h3');
+          title.className = 'tier-heading';
+          title.textContent = tiers[mat.tier] || `Nivel ${mat.tier}`;
+          title.dataset.tier = mat.tier;
+          title.setAttribute('role', 'button'); title.setAttribute('tabindex', '0'); title.setAttribute('aria-expanded', 'true');
+          const toggleTier = () => {
+            const collapsed = title.getAttribute('aria-expanded') === 'true';
+            title.setAttribute('aria-expanded', String(!collapsed));
+            let sibling = title.nextElementSibling;
+            while (sibling && !sibling.classList.contains('tier-heading')) {
+              sibling.classList.toggle('tier-item-hidden', collapsed); sibling = sibling.nextElementSibling;
+            }
+          };
+          title.onclick = toggleTier;
+          title.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleTier(); } };
+          title.style.gridColumn = '1 / -1'; grid.appendChild(title);
+        }
+        const unlocked = p.unlocked.includes(mat.id), equipped = p.loadout.includes(mat.id);
         const card = document.createElement('div');
-        card.className = 'card' + (unlocked ? '' : ' locked') + (m.id === selectedId ? ' sel' : '');
-        const tags = [];
-        if (m.tc_supercon > 0) tags.push('<span class="tagc sc">SC</span>');
-        if (m.magmom > 0.5) tags.push('<span class="tagc mag">MAG</span>');
-        if (m.engine.metastable) tags.push('<span class="tagc meta">META</span>');
-        if (m.two_d) tags.push('<span class="tagc d2">2D</span>');
-        if (m.engine.elec_class === 'insulator') tags.push('<span class="tagc">AISL</span>');
-        else if (m.engine.elec_class === 'semiconductor') tags.push('<span class="tagc">SEMI</span>');
-
-        card.innerHTML = `
-          <div class="sw" style="background:${m.color}"></div>
-          <div class="f">${m.formula}</div>
-          <div class="n">${m.name}</div>
-          <div class="tags">${tags.join('')}</div>
-          ${unlocked ? '' : `<div class="cost">⚗ ${m.cost} pts</div>`}
-          ${equipped ? '<div class="eq">✓ Equipado</div>' : ''}
-        `;
-        card.onclick = () => {
-          selectedId = m.id;
-          this.renderGrid();
-          this.renderDetail();
+        card.className = `card${unlocked ? '' : ' locked'}${mat.id === selectedId ? ' sel' : ''}`;
+        card.draggable = unlocked;
+        card.ondragstart = event => {
+          if (!unlocked) { event.preventDefault(); return; }
+          event.dataTransfer.setData('text/material-id', mat.id); event.dataTransfer.effectAllowed = 'copy';
+          card.classList.add('dragging');
         };
+        card.ondragend = () => card.classList.remove('dragging');
+        const tags = [];
+        if (mat.tc_supercon > 0) tags.push('<span class="tagc sc">SC</span>');
+        if (mat.magmom > .5) tags.push('<span class="tagc mag">MAG</span>');
+        if (mat.engine.metastable) tags.push('<span class="tagc meta">META</span>');
+        if (mat.two_d) tags.push('<span class="tagc d2">2D</span>');
+        if (mat.engine.elec_class === 'insulator') tags.push('<span class="tagc">AISL</span>');
+        else if (mat.engine.elec_class === 'semiconductor') tags.push('<span class="tagc">SEMI</span>');
+        card.innerHTML = `${unlocked ? '' : '<svg class="lock-mark" viewBox="0 0 24 24" aria-label="Bloqueado"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/></svg>'}<div class="sw" style="background:${mat.color}"></div><div class="f">${mat.formula}</div>
+          <div class="n">${mat.name}</div><div class="card-meta"><span>${mat.two_d ? '2D' : '3D'} · ${mat.engine.elec_class}</span>${equipped ? '<b class="eq">✓ Equipado</b>' : ''}</div>
+          <div class="tags">${tags.join('')}</div>`;
+        card.onclick = () => {
+          selectedId = mat.id;
+          A.play('select');
+          grid.querySelectorAll('.card').forEach(el => el.classList.toggle('sel', el === card));
+          this.renderDetail(true);
+        };
+        card.ondblclick = () => { selectedId = mat.id; if (unlocked) this.equip(mat.id); else this.renderDetail(true); };
         grid.appendChild(card);
       }
     },
-
-    renderDetail() {
-      const p = DB.progress;
-      const m = DB.get(selectedId) || DB.playable[0];
-      const e = m.engine;
-      const unlocked = p.unlocked.includes(m.id);
-      const eqIdx = p.loadout.indexOf(m.id);
-      const box = $('matDetail');
-
-      const elecLabel = e.elec_class === 'metal' ? 'Metal (conductor)'
-        : e.elec_class === 'insulator' ? 'Aislante eléctrico'
-        : `Semiconductor (conduce > ${e.arc_activation_T} K)`;
-
-      box.innerHTML = `
-        <canvas id="labCrystal" width="160" height="120"></canvas>
-        <h3>${m.formula} <small style="font-size:13px;color:var(--dim)">${m.spg_symbol}</small></h3>
-        <div class="sub">${m.name}${m.jid ? ' · ' + m.jid : ''}</div>
-        <div class="actions" id="labActions"></div>
-        <table>
-          <tr><td>Densidad (ρ)</td><td>${m.density} g/cm³ (g×${e.gravity_scale.toFixed(2)})</td></tr>
-          <tr><td>Mód. volumétrico (B)</td><td>${m.bulk_modulus} GPa</td></tr>
-          <tr><td>Mód. de corte (G)</td><td>${m.shear_modulus} GPa</td></tr>
-          <tr><td>Mód. de Young (E)</td><td>${e.young_modulus} GPa</td></tr>
-          <tr><td>Cociente de Pugh (B/G)</td><td>${e.pugh_ratio} (${e.ductile ? 'dúctil' : 'frágil'})</td></tr>
-          <tr><td>Bandgap (E<sub>g</sub>)</td><td>${m.bandgap} eV</td></tr>
-          <tr><td>Clase eléctrica</td><td>${elecLabel}</td></tr>
-          <tr><td>Cond. térmica (κ)</td><td>${m.thermal_conductivity} W/m·K</td></tr>
-          <tr><td>Punto de fusión (T<sub>m</sub>)</td><td>${m.melting_point} K</td></tr>
-          <tr><td>Momento mag. (μ<sub>B</sub>)</td><td>${m.magmom} μ<sub>B</sub>${m.curie_T ? ` (T<sub>C</sub> ${m.curie_T} K)` : ''}</td></tr>
-          <tr><td>Superconductor (T<sub>c</sub>)</td><td>${m.tc_supercon > 0 ? m.tc_supercon + ' K' : 'No'}</td></tr>
-          <tr><td>Estabilidad (e<sub>hull</sub>)</td><td>${m.ehull} eV/át${e.metastable ? ` (decaimiento ${e.decay_time} s)` : ' (estable)'}</td></tr>
-        </table>
-        ${m.note ? `<div class="src" style="color:#ffd27a">Nota: ${m.note}</div>` : ''}
-        <div class="src">Fuente: ${m.source}</div>
-      `;
-
-      labPreviewCanvas = $('labCrystal');
-
-      const act = $('labActions');
-      if (!unlocked) {
-        const btn = document.createElement('button');
-        btn.className = 'primary';
-        btn.textContent = `⚗ Sintetizar (${m.cost} pts)`;
-        btn.disabled = p.credits < m.cost;
-        btn.onclick = () => {
-          if (p.credits < m.cost) return;
-          p.credits -= m.cost;
-          p.unlocked.push(m.id);
-          if (p.loadout.length < 4) p.loadout.push(m.id);
-          DB.save();
-          A.play('absorb');
-          this.renderLab();
-        };
-        act.appendChild(btn);
-      } else if (eqIdx >= 0) {
-        const btn = document.createElement('button');
-        btn.textContent = 'Quitar del carrusel';
-        btn.disabled = p.loadout.length <= 1;
-        btn.onclick = () => {
-          if (p.loadout.length <= 1) return;
-          p.loadout.splice(eqIdx, 1);
-          DB.save();
-          A.play('switch');
-          this.renderLab();
-        };
-        act.appendChild(btn);
-      } else {
-        const btn = document.createElement('button');
-        btn.className = 'primary';
-        btn.textContent = p.loadout.length < 4 ? '+ Equipar en carrusel' : 'Carrusel lleno (4/4)';
-        btn.disabled = p.loadout.length >= 4;
-        btn.onclick = () => {
-          if (p.loadout.length >= 4) return;
-          p.loadout.push(m.id);
-          DB.save();
-          A.play('switch');
-          this.renderLab();
-        };
-        act.appendChild(btn);
-      }
+    equip(id) {
+      const p = DB.progress, existing = p.loadout.indexOf(id);
+      if (existing >= 0) { selectedSlot = existing; this.renderLoadout(); return; }
+      if (selectedSlot < p.loadout.length) p.loadout[selectedSlot] = id;
+      else if (p.loadout.length < 4) p.loadout.push(id); else return;
+      DB.save(); A.play('switch'); this.renderLab('equip');
     },
-
+    renderDetail(animate) {
+      const p = DB.progress, mat = DB.get(selectedId) || DB.playable[0], e = mat.engine;
+      const unlocked = p.unlocked.includes(mat.id), eqIdx = p.loadout.indexOf(mat.id), box = $('matDetail');
+      if (animate) { box.classList.remove('detail-change'); void box.offsetWidth; box.classList.add('detail-change'); }
+      const electrical = e.elec_class === 'metal' ? 'Metal · conductor' : e.elec_class === 'insulator' ? 'Aislante eléctrico' : `Semiconductor · >${e.arc_activation_T} K`;
+      box.innerHTML = `<div class="detail-hero"><canvas id="labCrystal" width="160" height="120"></canvas><div class="detail-title">
+        <span class="detail-kicker">${mat.two_d ? 'MATERIAL 2D' : 'MATERIAL CRISTALINO'}</span><h3>${mat.formula} <small>${mat.spg_symbol}</small></h3>
+        <div class="sub">${mat.name}${mat.jid ? ` · ${mat.jid}` : ''}</div></div></div><div class="actions" id="labActions"></div>
+        <div class="property-heading">Propiedades del material</div><table>
+        <tr><td>Densidad ρ</td><td>${mat.density} <small>g/cm³ · gravedad ×${e.gravity_scale.toFixed(2)}</small></td></tr>
+        <tr><td>Módulo volumétrico B</td><td>${mat.bulk_modulus} <small>GPa</small></td></tr><tr><td>Módulo de corte G</td><td>${mat.shear_modulus} <small>GPa</small></td></tr>
+        <tr><td>Módulo de Young E</td><td>${e.young_modulus} <small>GPa</small></td></tr><tr><td>Comportamiento</td><td>${e.ductile ? 'Dúctil' : 'Frágil'} <small>· B/G ${e.pugh_ratio}</small></td></tr>
+        <tr><td>Clase eléctrica</td><td>${electrical}</td></tr><tr><td>Bandgap Eg</td><td>${mat.bandgap} <small>eV</small></td></tr>
+        <tr><td>Conductividad térmica κ</td><td>${mat.thermal_conductivity} <small>W/m·K</small></td></tr><tr><td>Punto de fusión</td><td>${mat.melting_point} <small>K</small></td></tr>
+        <tr><td>Magnetismo μB</td><td>${mat.magmom}${mat.curie_T ? ` <small>· Tc ${mat.curie_T} K</small>` : ''}</td></tr>
+        <tr><td>Superconductor</td><td>${mat.tc_supercon > 0 ? `${mat.tc_supercon} K` : 'No'}</td></tr>
+        <tr><td>Estabilidad ehull</td><td>${mat.ehull} <small>eV/át · ${e.metastable ? `decaimiento ${e.decay_time} s` : 'estable'}</small></td></tr></table>
+        ${mat.note ? `<div class="src note">${mat.note}</div>` : ''}<div class="src">Fuente: ${mat.source}</div>`;
+      labPreviewCanvas = $('labCrystal'); const actions = $('labActions');
+      const button = document.createElement('button');
+      if (!unlocked) {
+        button.className = 'primary synthesize-button'; button.textContent = `✦ Sintetizar · ${mat.cost} Artecoins`; button.disabled = p.credits < mat.cost;
+        button.onclick = () => { if (p.credits < mat.cost) return; p.credits -= mat.cost; p.unlocked.push(mat.id);
+          if (selectedSlot < p.loadout.length) p.loadout[selectedSlot] = mat.id; else if (p.loadout.length < 4) p.loadout.push(mat.id);
+          DB.save(); A.play('absorb'); this.renderLab('synthesis'); };
+      } else if (eqIdx >= 0) {
+        button.textContent = 'Quitar del carrusel'; button.disabled = p.loadout.length <= 1;
+        button.onclick = () => { if (p.loadout.length <= 1) return; p.loadout.splice(eqIdx, 1); selectedSlot = Math.min(selectedSlot, p.loadout.length - 1); DB.save(); A.play('switch'); this.renderLab('remove'); };
+      } else {
+        button.className = 'primary'; button.textContent = '⇄ Intercambiar en carrusel'; button.disabled = p.loadout.length >= 4 && selectedSlot >= p.loadout.length;
+        button.onclick = () => this.equip(mat.id);
+      }
+      actions.appendChild(button);
+    },
     tickPreview(t) {
-      if (!labActive || !labPreviewCanvas) return;
-      const m = DB.get(selectedId);
-      if (!m) return;
-      const ctx = labPreviewCanvas.getContext('2d');
-      ctx.clearRect(0, 0, labPreviewCanvas.width, labPreviewCanvas.height);
-      const col = (m.color === '#2b2b3a' || m.color === '#1f2a30') ? '#8899aa' : m.color;
-      CD.Crystal.draw(ctx, 80, 60, 74, m.lattice, t, col);
+      if (!labActive || !labPreviewCanvas) return; const mat = DB.get(selectedId); if (!mat) return;
+      const ctx = labPreviewCanvas.getContext('2d'); ctx.clearRect(0, 0, labPreviewCanvas.width, labPreviewCanvas.height);
+      const color = (mat.color === '#2b2b3a' || mat.color === '#1f2a30') ? '#8899aa' : mat.color;
+      CD.Crystal.draw(ctx, 80, 60, 74, mat.lattice, t, color);
     },
   };
-
   CD.UI = UI;
 })();

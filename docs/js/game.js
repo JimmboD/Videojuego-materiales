@@ -155,6 +155,12 @@
       const zs = this.zonesAt(px);
       const tz = zs.find(z => z.kind === 'hot' || z.kind === 'cryo');
       zs.forEach(z => this.hint(z.kind));
+      const audioZone = zs.find(z => z.kind === 'hot' || z.kind === 'cryo' || z.kind === 'magnet');
+      const audioKind = audioZone ? audioZone.kind : null;
+      if (audioKind !== this.lastAudioZone) {
+        A.setZoneSound(audioKind);
+        this.lastAudioZone = audioKind;
+      }
       const Tz = tz ? tz.T : 300, k = tz ? tz.k : K.K_AMB;
       // dT/dt = k·κ·(Tz − T)  → solución exacta del paso
       this.T = Tz + (this.T - Tz) * Math.exp(-k * e.heat_rate * dt);
@@ -339,6 +345,7 @@
             const dm = DB.get(o.mat);
             this.absorbed = dm; this.absorbTimer = 8;
             this.bonus += 50;
+          this.flash = { color: dm.color, t: 0.48 };
             this.pop(`DOPAJE → ${dm.formula}`, '#ffd27a'); A.play('absorb');
             this.burst(K.PX + 17, p.y + 17, dm.color, 20, 200);
             break;
